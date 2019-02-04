@@ -4,7 +4,7 @@ Drugs Ranking Prediction based on Machine Learning model and comments' sentiment
 Files descriptions:
 
 ```bash
-machine_learning_prediction.ipynb	# prediction of ranking based on sentiment values (Python, Machine Learning)
+machine_learning_prediction.ipynb # prediction of ranking based on sentiment values (Python, Machine Learning)
 sentiment_test.Rmd # NLP analysis based on comments of test data (R, ggplot, NLP)
 sentiment_train.Rmd # NLP analysis based on comments of training data (R, ggplot, NLP)
 shiny_data.Rmd # Analysis for shiny visualisation App (R, ggplot)

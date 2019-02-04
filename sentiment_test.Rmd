@@ -1,0 +1,175 @@
+---
+title: "ML"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r include=FALSE, results='hide'}
+library(data.table)
+library(plyr)
+library(scales)
+library(wordcloud)
+library(syuzhet)
+library(tidyverse)
+library(RCurl)
+library(tidyr)
+library(tm)
+library(SnowballC)
+library(RColorBrewer)
+library(e1071)
+library(dplyr)
+library(ggplot2)
+library(tidytext)
+library(purrr)
+```
+```{r}
+test_data <- read.delim("~/recruitment_task/test_data.tsv", comment.char="#")
+test_data %>% group_by(condition) %>% summarize(n=n()) %>% arrange(desc(n))
+```
+```{r}
+test_data %>% filter(is.na(test_data$condition)) %>% summarize(n=n())
+```
+
+
+```{r}
+#sentiment analysis function
+sen_fuc <- function(dane) {
+  docs <- Corpus(VectorSource(dane))
+  docs <- tm_map(docs, tolower) 
+  docs <- tm_map(docs, removeNumbers) 
+  docs <- tm_map(docs, removeWords, stopwords("english")) 
+  docs <- tm_map(docs, removePunctuation) 
+  docs <- tm_map(docs, stripWhitespace) 
+  dtm <- TermDocumentMatrix(docs)    
+  m   <- as.matrix(dtm)                   
+  v   <- sort(rowSums(m), decreasing=TRUE)   
+  d   <- data.frame(word=names(v), freq=v) 
+  df_sentiment<-get_nrc_sentiment(as.String(d$word)) 
+  df_sentiment_transposed <- t(df_sentiment)
+  df_sentiment_final <- data.frame(sentiment=row.names(df_sentiment_transposed),sent_value=df_sentiment_transposed,     row.names=NULL) 
+  df_sentiments <<- df_sentiment_final[9:10,] 
+  df_sentiments %>% mutate(percent = df_sentiments$sent_value/sum(df_sentiments$sent_value)) ->> df_sentiments
+  return(df_sentiments$percent[2])
+}
+```
+
+```{r}
+test_data
+```
+
+```{r include=FALSE, results='hide'}
+#creating new columns with applied sentiment analysis for benefits/side effects/review
+test_data <- test_data %>% mutate(full_comment = paste(test_data$benefitsReview, test_data$sideEffectsReview, test_data$commentsReview
+, sep = ", "))
+test_data$full_commentSentiment <- map_dbl(test_data[,10],sen_fuc)
+test_data$BenefitsSentiment <- map_dbl(test_data[,7],sen_fuc)
+test_data$SideEffectsSentiment <- map_dbl(test_data[,8],sen_fuc)
+test_data$ReviewSentiment <- map_dbl(test_data[,9],sen_fuc)
+```
+
+```{r}
+head(test_data)
+```
+
+```{r}
+#changing levels from string to numbers
+test_data = test_data %>% mutate(
+     sideEff_num = case_when(
+         sideEffects == "Extremely Severe Side Effects" ~ 1,
+         sideEffects == "Severe Side Effects" ~ 2,
+         sideEffects == "Moderate Side Effects" ~ 3,
+         sideEffects == "Mild Side Effects" ~ 4,
+         sideEffects == "No Side Effects" ~ 5
+     ),
+     eff_num = case_when(
+         effectiveness == "Ineffective" ~ 1,
+         effectiveness == "Marginally Effective" ~ 2,
+         effectiveness == "Moderately Effective" ~ 3,
+         effectiveness == "Considerably Effective" ~ 4,
+         effectiveness == "Highly Effective" ~ 5
+     )
+)
+```
+
+
+```{r}
+#counting mean of each sentiment column
+head(test_data)
+mean(na.omit(test_data$ReviewSentiment)) # mean 
+mean(na.omit(test_data$SideEffectsSentiment)) #mean 
+mean(na.omit(test_data$BenefitsSentiment)) #mean 
+```
+```{r}
+#creating final training dataset
+test_data_final <- test_data %>% select(urlDrugName, condition, rating,  ReviewSentiment, sideEff_num, SideEffectsSentiment, eff_num, BenefitsSentiment, full_commentSentiment)
+
+#replacing NA with average sentiment for each column
+test_data_final$ReviewSentiment[is.na(test_data_final$ReviewSentiment)] <- mean(na.omit(test_data$ReviewSentiment))
+
+test_data_final$SideEffectsSentiment[is.na(test_data_final$SideEffectsSentiment)] <- mean(na.omit(test_data$SideEffectsSentiment))
+
+test_data_final$BenefitsSentiment[is.na(test_data_final$BenefitsSentiment)] <- mean(na.omit(test_data$BenefitsSentiment))
+
+test_data_final$full_commentSentiment[is.na(test_data_final$full_commentSentiment)] <- mean(na.omit(test_data$full_commentSentiment))
+
+#changing columns to doubles and changing scale (so all are up to 10)
+test_data_final$rating <- as.double(test_data_final$rating)
+test_data_final$ReviewSentiment <- as.double(test_data_final$ReviewSentiment)*10
+test_data_final$SideEffectsSentiment <- as.double(test_data_final$SideEffectsSentiment)*10
+test_data_final$BenefitsSentiment <- as.double(test_data_final$BenefitsSentiment)*10
+test_data_final$sideEff_num <- test_data_final$sideEff_num*2
+test_data_final$eff_num <- test_data_final$eff_num*2
+test_data_final$full_commentSentiment <- as.double(test_data_final$full_commentSentiment)*10
+
+head(test_data_final)
+```
+```{r}
+cor(test_data_final$rating, test_data_final$full_commentSentiment) 
+model_fullcomment <- lm(rating ~ full_commentSentiment, data=test_data_final)
+plot(rating ~ full_commentSentiment, data=test_data_final)
+abline(model_fullcomment , col="blue", lwd=3)  
+```
+
+
+```{r}
+cor(test_data_final$rating, test_data_final$sideEff_num)
+model_sideeff <- lm(rating ~ sideEff_num, data=test_data_final)
+plot(rating ~ sideEff_num, data=test_data_final)
+abline(model_sideeff, col="blue", lwd=3)  #posiive correlation
+```
+
+```{r}
+cor(test_data_final$rating, test_data_final$eff_num) 
+model_eff <- lm(rating ~ eff_num, data=test_data_final)
+plot(rating ~ eff_num, data=test_data_final)
+abline(model_eff, col="blue", lwd=3)  #posiive correlation
+```
+
+```{r}
+#correlations and linear models between sentiment and real ranking
+cor(test_data_final$ReviewSentiment, test_data_final$rating)
+model1 <- lm(rating ~ ReviewSentiment, data=test_data_final)
+plot(rating ~ ReviewSentiment, data=test_data_final)
+abline(model1, col="blue", lwd=3)
+```
+
+```{r}
+cor(test_data_final$sideEff_num, test_data_final$SideEffectsSentiment)
+model2 <- lm(sideEff_num ~ SideEffectsSentiment, data=test_data_final)
+plot(sideEff_num ~ SideEffectsSentiment, data=test_data_final)
+abline(model2, col="blue", lwd=3)
+```
+```{r}
+cor(test_data_final$BenefitsSentiment, test_data_final$eff_num)
+model3 <- lm(eff_num ~ BenefitsSentiment, data=test_data_final)
+plot(eff_num ~ BenefitsSentiment, data=test_data_final)
+abline(model3, col="blue", lwd=3)
+```
+
+```{r}
+write.csv(test_data_final,'test_data_final.csv')
+```
+
+
+

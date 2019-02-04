@@ -1,0 +1,174 @@
+---
+title: "ML"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r include=FALSE, results='hide'}
+library(data.table)
+library(plyr)
+library(scales)
+library(wordcloud)
+library(syuzhet)
+library(tidyverse)
+library(RCurl)
+library(tidyr)
+library(tm)
+library(SnowballC)
+library(RColorBrewer)
+library(e1071)
+library(dplyr)
+library(ggplot2)
+library(tidytext)
+library(purrr)
+```
+```{r}
+training_data <- read.delim("~/recruitment_task/training_data.tsv", comment.char="#")
+```
+```{r}
+training_data %>% filter(is.na(training_data$condition)) %>% summarize(n=n())
+```
+```{r}
+training_data %>% group_by(urlDrugName) %>% summarize(n=n()) %>% arrange(desc(n))
+```
+
+
+```{r}
+#sentiment analysis function
+sen_fuc <- function(dane) {
+  docs <- Corpus(VectorSource(dane))
+  docs <- tm_map(docs, tolower) 
+  docs <- tm_map(docs, removeNumbers) 
+  docs <- tm_map(docs, removeWords, stopwords("english")) 
+  docs <- tm_map(docs, removePunctuation) 
+  docs <- tm_map(docs, stripWhitespace) 
+  dtm <- TermDocumentMatrix(docs)    
+  m   <- as.matrix(dtm)                   
+  v   <- sort(rowSums(m), decreasing=TRUE)   
+  d   <- data.frame(word=names(v), freq=v) 
+  df_sentiment<-get_nrc_sentiment(as.String(d$word)) 
+  df_sentiment_transposed <- t(df_sentiment)
+  df_sentiment_final <- data.frame(sentiment=row.names(df_sentiment_transposed),sent_value=df_sentiment_transposed,     row.names=NULL) 
+  df_sentiments <<- df_sentiment_final[9:10,] 
+  df_sentiments %>% mutate(percent = df_sentiments$sent_value/sum(df_sentiments$sent_value)) ->> df_sentiments
+  return(df_sentiments$percent[2])
+}
+```
+
+```{r include=FALSE, results='hide'}
+#creating new columns with applied sentiment analysis for benefits/side effects/review
+training_data <- training_data %>% mutate(full_comment = paste(training_data$benefitsReview, training_data$sideEffectsReview, training_data$commentsReview
+, sep = ", "))
+training_data$full_commentSentiment <- map_dbl(training_data[,10],sen_fuc)
+training_data$BenefitsSentiment <- map_dbl(training_data[,7],sen_fuc)
+training_data$SideEffectsSentiment <- map_dbl(training_data[,8],sen_fuc)
+training_data$ReviewSentiment <- map_dbl(training_data[,9],sen_fuc)
+```
+
+```{r}
+head(training_data)
+```
+
+```{r}
+#changing levels from string to numbers
+training_data = training_data %>% mutate(
+     sideEff_num = case_when(
+         sideEffects == "Extremely Severe Side Effects" ~ 1,
+         sideEffects == "Severe Side Effects" ~ 2,
+         sideEffects == "Moderate Side Effects" ~ 3,
+         sideEffects == "Mild Side Effects" ~ 4,
+         sideEffects == "No Side Effects" ~ 5
+     ),
+     eff_num = case_when(
+         effectiveness == "Ineffective" ~ 1,
+         effectiveness == "Marginally Effective" ~ 2,
+         effectiveness == "Moderately Effective" ~ 3,
+         effectiveness == "Considerably Effective" ~ 4,
+         effectiveness == "Highly Effective" ~ 5
+     )
+)
+```
+
+
+```{r}
+#counting mean of each sentiment column
+head(training_data)
+mean(na.omit(training_data$ReviewSentiment)) # mean 0.57
+mean(na.omit(training_data$SideEffectsSentiment)) #mean 0.36
+mean(na.omit(training_data$BenefitsSentiment)) #mean 0.45
+```
+```{r}
+#creating final training dataset
+training_data_final <- training_data %>% select(urlDrugName, condition, rating,  ReviewSentiment, sideEff_num, SideEffectsSentiment, eff_num, BenefitsSentiment, full_commentSentiment)
+
+#replacing NA with average sentiment for each column
+training_data_final$ReviewSentiment[is.na(training_data_final$ReviewSentiment)] <- mean(na.omit(training_data$ReviewSentiment))
+
+training_data_final$SideEffectsSentiment[is.na(training_data_final$SideEffectsSentiment)] <- mean(na.omit(training_data$SideEffectsSentiment))
+
+training_data_final$BenefitsSentiment[is.na(training_data_final$BenefitsSentiment)] <- mean(na.omit(training_data$BenefitsSentiment))
+
+training_data_final$full_commentSentiment[is.na(training_data_final$full_commentSentiment)] <- mean(na.omit(training_data$full_commentSentiment))
+
+#changing columns to doubles and changing scale (so all are up to 10)
+training_data_final$rating <- as.double(training_data_final$rating)
+training_data_final$ReviewSentiment <- as.double(training_data_final$ReviewSentiment)*10
+training_data_final$SideEffectsSentiment <- as.double(training_data_final$SideEffectsSentiment)*10
+training_data_final$BenefitsSentiment <- as.double(training_data_final$BenefitsSentiment)*10
+training_data_final$sideEff_num <- training_data_final$sideEff_num*2
+training_data_final$eff_num <- training_data_final$eff_num*2
+
+training_data_final$full_commentSentiment <- as.double(training_data_final$full_commentSentiment)*10
+
+head(training_data_final)
+```
+```{r}
+cor(training_data_final$rating, training_data_final$full_commentSentiment) 
+model_fullcomment <- lm(rating ~ full_commentSentiment, data=training_data_final)
+plot(rating ~ full_commentSentiment, data=training_data_final)
+abline(model_fullcomment , col="blue", lwd=3)  
+```
+
+
+```{r}
+cor(training_data_final$rating, training_data_final$sideEff_num) #0.68
+model_sideeff <- lm(rating ~ sideEff_num, data=training_data_final)
+plot(rating ~ sideEff_num, data=training_data_final)
+abline(model_sideeff, col="blue", lwd=3)  #posiive correlation
+```
+
+```{r}
+cor(training_data_final$rating, training_data_final$eff_num) #0.74
+model_eff <- lm(rating ~ eff_num, data=training_data_final)
+plot(rating ~ eff_num, data=training_data_final)
+abline(model_eff, col="blue", lwd=3)  #posiive correlation
+```
+
+```{r}
+#correlations and linear models between sentiment and real ranking
+cor(training_data_final$ReviewSentiment, training_data_final$rating)
+model1 <- lm(rating ~ ReviewSentiment, data=training_data_final)
+plot(rating ~ ReviewSentiment, data=training_data_final)
+abline(model1, col="blue", lwd=3)
+```
+
+```{r}
+cor(training_data_final$sideEff_num, training_data_final$SideEffectsSentiment)
+model2 <- lm(sideEff_num ~ SideEffectsSentiment, data=training_data_final)
+plot(sideEff_num ~ SideEffectsSentiment, data=training_data_final)
+abline(model2, col="blue", lwd=3)
+```
+```{r}
+cor(training_data_final$BenefitsSentiment, training_data_final$eff_num)
+model3 <- lm(eff_num ~ BenefitsSentiment, data=training_data_final)
+plot(eff_num ~ BenefitsSentiment, data=training_data_final)
+abline(model3, col="blue", lwd=3)
+```
+
+```{r}
+write.csv(training_data_final,'training_data_final.csv')
+```
+
+
+

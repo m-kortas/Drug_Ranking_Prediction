@@ -1,0 +1,72 @@
+---
+title: "shiny_data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(data.table)
+library(plyr)
+library(scales)
+library(wordcloud)
+library(syuzhet)
+library(tidyverse)
+library(RCurl)
+library(tidyr)
+library(tm)
+library(SnowballC)
+library(RColorBrewer)
+library(e1071)
+library(dplyr)
+library(ggplot2)
+library(tidytext)
+library(purrr)
+```
+
+
+```{r}
+shiny_data <- read.csv("~/recruitment_task/shiny_data.csv", row.names=1)
+head(shiny_data)
+```
+
+```{r}
+shiny_data %>% select(urlDrugName, rating, y_pred, condition) -> shiny_data_final
+shiny_data_final$rating <- as.double(shiny_data_final$rating)
+head(shiny_data_final) 
+```
+
+
+```{r} 
+shiny_data_final %>% group_by(urlDrugName) %>% summarize(avg_rating = mean(rating), avg_sent_rating = mean(y_pred), n_reviewes= n()) 
+```
+```{r}
+shiny_data_final %>% group_by(urlDrugName, condition) %>% summarize(Average_Rating = mean(rating), Average_Sentiment_Rating = mean(y_pred), n_reviews= n()) -> ranking_final
+head(ranking_final)
+```
+
+```{r}
+ranking_final %>% filter(urlDrugName == "abilify") #%>% summarize(avg_rating = mean(rating), avg_sent_rating = mean(y_pred)) 
+
+```
+```{r}
+ranking_final %>% filter(condition ==  "depression") %>% arrange(desc(Average_Rating),desc(Average_Sentiment_Rating))  %>% head(5) -> plotdrugs # summarize(avg_rating = mean(rating), avg_sent_rating = mean(y_pred)) 
+plotdrugs
+
+```
+
+```{r}
+plotdrugs %>%
+               ggplot(aes(reorder(urlDrugName,Average_Rating), Average_Rating, fill = Average_Sentiment_Rating)) +
+               geom_col(show.legend = TRUE) +
+               xlab("Drug name") +
+               ylab("Average overall ranking") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+            #   facet_wrap(~ topic, scales = "free", shrink = TRUE) +
+```
+
+```{r}
+plotdrugs %>% head(1) -> best_drug
+best_drug
+```
+
+

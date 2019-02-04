@@ -1,6 +1,11 @@
 # Drugs_Ranking_Prediction
 Drugs Ranking Prediction based on Machine Learning model and comments' sentiment analysis
 
+
+The dataset provides patient reviews on specific drugs along with related conditions. Furthermore, reviews are grouped into reports on the three aspects benefits, side effects and overall comment. Additionally, ratings are available concerning overall satisfaction as well as a 5 step side effect rating and a 5 step effectiveness rating. The data was obtained by crawling online pharmaceutical review sites. 
+
+Data source: https://archive.ics.uci.edu/ml/datasets/Drug+Review+Dataset+%28Druglib.com%29
+
 Files descriptions:
 
 ```bash

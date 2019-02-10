@@ -44,20 +44,23 @@ head(ranking_final)
 ```
 
 ```{r}
-ranking_final %>% filter(urlDrugName == "abilify") #%>% summarize(avg_rating = mean(rating), avg_sent_rating = mean(y_pred)) 
+ #%>% summarize(avg_rating = mean(rating), avg_sent_rating = mean(y_pred)) 
+
 
 ```
 ```{r}
-ranking_final %>% filter(condition ==  "depression") %>% arrange(desc(Average_Rating),desc(Average_Sentiment_Rating))  %>% head(5) -> plotdrugs # summarize(avg_rating = mean(rating), avg_sent_rating = mean(y_pred)) 
-plotdrugs
+ranking_final %>% filter(condition ==  "depression") %>% arrange(desc(Average_Rating),desc(Average_Sentiment_Rating))  %>% head(5) -> plotdrugs 
 
 ```
 
 ```{r}
-plotdrugs %>%
-               ggplot(aes(reorder(urlDrugName,Average_Rating), Average_Rating, fill = Average_Sentiment_Rating)) +
+
+ranking_final %>% filter(urlDrugName == "abilify") -> illness
+
+illness %>%
+               ggplot(aes(reorder(condition,Average_Rating), Average_Rating, fill = Average_Sentiment_Rating)) +
                geom_col(show.legend = TRUE) +
-               xlab("Drug name") +
+               xlab("Illness") +
                ylab("Average overall ranking") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 

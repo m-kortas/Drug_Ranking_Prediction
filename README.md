@@ -24,6 +24,8 @@ machine_learning_prediction.ipynb # prediction of ranking based on sentiment val
 sentiment_test.Rmd # NLP analysis based on comments of test data (R, ggplot, NLP)
 sentiment_train.Rmd # NLP analysis based on comments of training data (R, ggplot, NLP)
 shiny_data.Rmd # Analysis for shiny visualisation App (R, ggplot)
+drugs_emotions.Rmd # Emotions analysis of drugs from test data (R, ggplot, NLP, wordloud)
+app.R # Shiny Application 
   
 shiny_data.csv # Data for shiny visualisation App
 test_data.tsv # Raw test data

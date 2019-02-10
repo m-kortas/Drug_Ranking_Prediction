@@ -1,0 +1,78 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+library(data.table)
+library(plyr)
+library(scales)
+library(wordcloud)
+library(syuzhet)
+library(tidyverse)
+library(RCurl)
+library(tidyr)
+library(tm)
+library(SnowballC)
+library(RColorBrewer)
+library(e1071)
+library(dplyr)
+library(ggplot2)
+library(tidytext)
+library(purrr)
+```
+
+```{r}
+test_data <- read.delim("~/recruitment_task/test_data.tsv", comment.char="#")
+
+test_data %>% filter(urlDrugName == "biaxin") %>% arrange(desc(X)) %>% head(1) %>% select(benefitsReview, sideEffectsReview, commentsReview)
+```
+
+```{r}
+
+p <- function(v) {
+  Reduce(f=paste, x = v)
+}
+
+test_data %>% 
+ group_by(urlDrugName)  %>% 
+  mutate(benefits=p(benefitsReview), sideef = p(sideEffectsReview), total = p(commentsReview)) -> data
+
+data %>% group_by(urlDrugName) %>% select(urlDrugName, benefits, sideef, total) -> data_for_emotions
+
+unique(data_for_emotions) %>% filter(urlDrugName == "biaxin") -> data_for_emotions2
+
+```
+
+```{r}
+  dane3 <- data_for_emotions2$sideef
+  docs <- Corpus(VectorSource(dane3))
+  docs <- tm_map(docs, tolower) 
+  docs <- tm_map(docs, removeNumbers) 
+  docs <- tm_map(docs, removeWords, stopwords("english")) 
+  docs <- tm_map(docs, removePunctuation) 
+  docs <- tm_map(docs, stripWhitespace) 
+  dtm <- TermDocumentMatrix(docs)    
+  m   <- as.matrix(dtm)                   
+  v   <- sort(rowSums(m), decreasing=TRUE)   
+  d   <- data.frame(word=names(v), freq=v) 
+   df_sentiment<-get_nrc_sentiment(as.String(d$word)) 
+    df_sentiment_transposed <- t(df_sentiment)
+    df_sentiment_final <- data.frame(sentiment=row.names(df_sentiment_transposed),sent_value=df_sentiment_transposed, row.names=NULL) 
+    df_emotions <<- df_sentiment_final[1:8,]    
+
+```
+
+```{r}
+wordcloud(words = d$word, freq = d$freq, min.freq = 1, 
+              max.words = 30, random.order = TRUE, rot.per = 0.1, colors = brewer.pal(8,"Dark2")) 
+```
+
+```{r}
+  ggplotly(ggplot(data= df_emotions, mapping= aes(x=sentiment, y = sent_value, color=sentiment, fill = sentiment))+
+               geom_bar(stat="identity") +
+               xlab("Emotions connected to the pill")+
+               ylab("Value") +
+               theme(axis.text.x=element_text(angle=90, hjust=1))) 
+```
+

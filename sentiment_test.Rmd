@@ -31,7 +31,6 @@ test_data %>% group_by(condition) %>% summarize(n=n()) %>% arrange(desc(n))
 test_data %>% filter(is.na(test_data$condition)) %>% summarize(n=n())
 ```
 
-
 ```{r}
 #sentiment analysis function
 sen_fuc <- function(dane) {
@@ -171,5 +170,38 @@ abline(model3, col="blue", lwd=3)
 write.csv(test_data_final,'test_data_final.csv')
 ```
 
+### Additional analysis of test data
 
+```{r}
+library(gridExtra)
+library(corrplot)
+test_data_final <- read.csv("~/recruitment_task/test_data_final.csv")
+```
+
+
+```{r}
+dim(test_data_final)
+sum(is.na(test_data_final))
+```
+
+```{r}
+head(test_data_final)
+test_data_analysis <- subset(test_data_final, select=-c(X, urlDrugName, condition))
+```
+
+```{r}
+graphlist <- list()
+for (i in names(test_data_analysis)) {
+  graphlist[[i]] <- ggplot(test_data_analysis, aes_string(x = i)) + geom_histogram(fill = "SteelBlue") + labs(y = "")
+}
+do.call("grid.arrange", c(graphlist, ncol = 4))
+```
+```{r}
+summary(test_data_analysis)
+
+```
+
+```{r}
+corrplot(cor(test_data_analysis)) # only dots
+```
 

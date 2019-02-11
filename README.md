@@ -25,7 +25,7 @@ The dataset provides patient reviews on specific drugs along with related condit
 
 # Machine Learning Model
 
-There final model built to predict rating (based on attributes: sideEff_num, eff_num, full_commentSentiment and condition) was Random Forest Regressor due to his smallest RMSLE error (in comparison to other models tried on data). The regressor's parameters were chosen with the help of TPOT (The Tree-Based Pipeline Optimization Tool). 
+The final model built to predict rating (based on attributes: sideEff_num, eff_num, full_commentSentiment and condition) was Random Forest Regressor due to his smallest RMSLE error (in comparison to other models tried on data). The regressor's parameters were chosen with the help of TPOT (The Tree-Based Pipeline Optimization Tool). 
 
 # The application
 

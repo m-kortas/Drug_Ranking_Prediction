@@ -32,6 +32,12 @@ There final model built to predict rating (based on attributes: sideEff_num, eff
 The application and visualisation was built with help of Shiny and visualisation packages of R and HTML, CSS.
 
 The application: https://mkortas.shinyapps.io/Drug_Reviews/
+The app shows:
+- Best drugs for chosen condition (with the highest average rating and sentiment rating)
+- Last review for chosen drug
+- All conditions the chosen drug can heal and average rating and sentiment rating for each condition
+- Emotions related to chosen drug (based on full review)
+- Wordclouds (most common words) for each drug for benefits review and side effects review
 
 Data source: https://archive.ics.uci.edu/ml/datasets/Drug+Review+Dataset+%28Druglib.com%29
 

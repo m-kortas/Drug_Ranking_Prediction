@@ -11,8 +11,8 @@ The dataset provides patient reviews on specific drugs along with related condit
 4. sideEffectsReview (text): patient on side effects 
 5. commentsReview (text): overall patient comment 
 6. rating (numerical): 10 star patient rating 
-7. sideEffects (categorical): 5 step side effect rating - changed to 1 to 5 rating (numerical)
-8. effectiveness (categorical): 5 step effectiveness rating  - changed to 1 to 5 rating (numerical)
+7. sideEffects (categorical): 5 step side effect rating 
+8. effectiveness (categorical): 5 step effectiveness rating  
 
 # Attributes built during Natural Language Processing: 
 
@@ -26,6 +26,12 @@ The dataset provides patient reviews on specific drugs along with related condit
 # Machine Learning Model
 
 There final model built to predict rating (based on attributes: sideEff_num, eff_num, full_commentSentiment and condition) was Random Forest Regressor due to his smallest RMSLE error (in comparison to other models tried on data). The regressor's parameters were chosen with the help of TPOT (The Tree-Based Pipeline Optimization Tool). 
+
+# The application
+
+The application and visualisation was built with help of Shiny and visualisation packages of R and HTML, CSS.
+
+The application: https://mkortas.shinyapps.io/Drug_Reviews/
 
 Data source: https://archive.ics.uci.edu/ml/datasets/Drug+Review+Dataset+%28Druglib.com%29
 
